@@ -9,6 +9,12 @@ export const productImagesDir = path.resolve(__dirname, "../../../web/public/img
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
+const isPlainObject = (value: unknown): value is Record<string, unknown> => {
+  if (!isRecord(value)) return false;
+
+  return Object.prototype.toString.call(value) === "[object Object]";
+};
+
 const isRelativePublicAsset = (value: string) => value.startsWith("/img/");
 
 export const toAbsoluteAssetUrl = (assetUrl: string, req: Pick<Request, "protocol" | "get">) => {
@@ -26,7 +32,7 @@ export const normalizeAssetUrls = <T>(value: T, req: Pick<Request, "protocol" | 
     return normalizedItems as T;
   }
 
-  if (!isRecord(value)) return value;
+  if (!isPlainObject(value)) return value;
 
   const output: Record<string, unknown> = {};
 
