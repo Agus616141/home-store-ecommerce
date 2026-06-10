@@ -5,6 +5,7 @@ import { useCartStore } from '../../../shared/stores/cart.store'
 import { useAuthStore, selectIsAuthenticated } from '../../../shared/stores/auth.store'
 import { ApiError } from '../../../shared/api/client'
 import { AMBIENT_MAP, ALL_CATEGORIES, type AmbientKey } from '../lib/ambients'
+import { fetchCachedCatalogPage, getCachedCatalogPage, prefetchCatalogPage } from '../lib/catalog-cache'
 import { useCatalogsStore, type CatalogKey } from '../../../shared/stores/catalogs.store'
 import type { ProductSummary, ProductListParams } from '../../../shared/api/dto.types'
 import type { ProductCardData } from '../../products/components/ProductCard'
@@ -77,21 +78,34 @@ export function useCatalogController(ambient?: string) {
 
   // When multi-filtering client-side, fetch a large batch and filter locally
   const clientFilter = categories.length > 1 || colors.length > 0 || materials.length > 0 || Boolean(ambientConfig)
+  const requestParams = useMemo<ProductListParams>(() => ({
+    page: clientFilter ? 1 : page,
+    limit: clientFilter ? 100 : PAGE_SIZE,
+    q,
+    categorySlug: categories.length === 1 && !ambientConfig ? categories[0] : undefined,
+    sort,
+  }), [ambientConfig, categories, clientFilter, page, q, sort])
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
     setError('')
 
-    const listProducts = clientFilter ? productsApi.listAll : productsApi.list
+    const cachedPage = clientFilter ? undefined : getCachedCatalogPage(requestParams)
+    if (cachedPage) {
+      setProducts(cachedPage.products)
+      setTotal(cachedPage.total)
+      setLoading(false)
+      return () => { cancelled = true }
+    }
 
-    listProducts({
-        page: clientFilter ? 1 : page,
-        limit: clientFilter ? 100 : PAGE_SIZE,
-        q,
-        categorySlug: categories.length === 1 && !ambientConfig ? categories[0] : undefined,
-        sort,
-      })
+    setLoading(true)
+    setProducts([])
+
+    const loadProducts = clientFilter
+      ? productsApi.listAll
+      : (params: ProductListParams) => fetchCachedCatalogPage(params, productsApi.list)
+
+    loadProducts(requestParams)
       .then((res) => {
         if (cancelled) return
 
@@ -135,7 +149,20 @@ export function useCatalogController(ambient?: string) {
       })
 
     return () => { cancelled = true }
-  }, [ambient, ambientCatsKey, ambientConfig, categories, clientFilter, colors, materials, page, q, sort])
+  }, [ambient, ambientCatsKey, ambientConfig, categories, clientFilter, colors, materials, requestParams])
+
+  // Prefetch the next server-side page so pagination feels instant after the first view.
+  useEffect(() => {
+    if (clientFilter) return
+
+    const totalPages = Math.ceil(Math.max(total, 1) / PAGE_SIZE)
+    if (page >= totalPages) return
+
+    void prefetchCatalogPage(
+      { ...requestParams, page: page + 1, limit: PAGE_SIZE },
+      productsApi.list,
+    )
+  }, [clientFilter, page, requestParams, total])
 
   function updateParams(updates: Record<string, string | undefined>) {
     const current: Record<string, string> = {}
@@ -209,6 +236,7 @@ export function useCatalogController(ambient?: string) {
     setSort,
     loading,
     error,
+    showSkeletons: loading,
     addToCart,
     searchQuery: q,
     categories,

@@ -1,7 +1,6 @@
 import { useParams, Link } from 'react-router-dom'
 import { useState } from 'react'
 import { ProductCard } from '../../products/components/ProductCard'
-import { Spinner } from '../../../shared/ui/Spinner'
 import { ErrorMessage } from '../../../shared/ui/ErrorMessage'
 import { useCatalogController } from '../controllers/useCatalogController'
 import { ALL_CATEGORIES } from '../lib/ambients'
@@ -278,10 +277,37 @@ function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
   )
 }
 
+function ProductGridSkeleton() {
+  return (
+    <>
+      <div className="grid grid-cols-3 gap-x-[24px] gap-y-[28px] max-md:grid-cols-2">
+        {Array.from({ length: 6 }, (_, i) => (
+          <div key={i} className="animate-pulse flex flex-col gap-[14px]">
+            <div
+              className="aspect-[3/4] w-full rounded-[12px]"
+              style={{ background: 'color-mix(in srgb, var(--color-cream) 60%, white)' }}
+            />
+            <div className="flex flex-col gap-[10px]">
+              <div
+                className="h-[18px] rounded-full w-[72%]"
+                style={{ background: 'color-mix(in srgb, var(--color-cream) 45%, white)' }}
+              />
+              <div
+                className="h-[16px] rounded-full w-[36%]"
+                style={{ background: 'color-mix(in srgb, var(--color-cream) 38%, white)' }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  )
+}
+
 /* ---- Grid de productos ---- */
 function ProductGrid({ vm }: { vm: ReturnType<typeof useCatalogController> }) {
-  if (vm.loading) {
-    return <div className="flex justify-center py-[60px]"><Spinner size="lg" /></div>
+  if (vm.showSkeletons) {
+    return <ProductGridSkeleton />
   }
   if (vm.error) {
     return <ErrorMessage message={vm.error} />
