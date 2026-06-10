@@ -2,6 +2,8 @@ import { Link } from 'react-router-dom'
 import { formatPrice } from '../../../shared/lib/format-price'
 import { useAuthStore, selectIsAuthenticated } from '../../../shared/stores/auth.store'
 import { useWishlistStore } from '../../../shared/stores/wishlist.store'
+import { ImgSlot } from '../../../shared/ui/ImgSlot'
+import { useState } from 'react'
 
 export interface ProductCardData {
   id: string
@@ -17,14 +19,16 @@ interface ProductCardProps {
   product: ProductCardData
   onAddToCart?: (id: string) => void
   slotNumber?: number
+  priority?: boolean
 }
 
 // Clean heart path (Feather Icons)
 const HEART_PATH =
   'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z'
 
-export function ProductCard({ product, onAddToCart }: ProductCardProps) {
+export function ProductCard({ product, onAddToCart, slotNumber, priority = false }: ProductCardProps) {
   const { id, slug, name, priceCents, imageUrl, badge, swatches } = product
+  const [imageFailed, setImageFailed] = useState(false)
 
   const isAuth = useAuthStore(selectIsAuthenticated)
   const wishlistItems = useWishlistStore(s => s.items)
@@ -49,16 +53,18 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
         style={{ background: 'var(--color-cream-2)' }}
       >
         <Link to={`/product/${slug}`} tabIndex={-1} aria-hidden="true">
-          {imageUrl ? (
+          {imageUrl && !imageFailed ? (
             <img
               src={imageUrl}
               alt={name}
-              loading="lazy"
+              loading={priority ? 'eager' : 'lazy'}
               decoding="async"
+              fetchPriority={priority ? 'high' : 'auto'}
+              onError={() => setImageFailed(true)}
               className="aspect-[3/4] w-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
           ) : (
-            <div className="aspect-[3/4] w-full" style={{ background: 'var(--color-cream-2)' }} />
+            <ImgSlot n={slotNumber ?? 25} className="aspect-[3/4] w-full" />
           )}
         </Link>
 

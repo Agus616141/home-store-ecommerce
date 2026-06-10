@@ -64,7 +64,13 @@ function formatDate(iso: string): string {
 /* ---- Gallery ---- */
 function Gallery({ images }: { images: { url: string; altText?: string | null }[] }) {
   const [active, setActive] = useState(0)
+  const [failedUrls, setFailedUrls] = useState<Record<string, true>>({})
   const displayImages = images.length > 0 ? images : null
+  const activeImage = displayImages?.[active] ?? displayImages?.[0] ?? null
+
+  function markFailed(url: string) {
+    setFailedUrls((prev) => (prev[url] ? prev : { ...prev, [url]: true }))
+  }
 
   return (
     <div className="grid gap-4 sticky top-[96px]" style={{ gridTemplateColumns: '74px 1fr' }}>
@@ -78,7 +84,18 @@ function Gallery({ images }: { images: { url: string; altText?: string | null }[
             aria-label={`Ver imagen ${i + 1}`}
             aria-pressed={active === i}
           >
-            <img src={img.url} alt={img.altText ?? ''} className="w-full h-full object-cover" />
+            {failedUrls[img.url] ? (
+              <ImgSlot n={i + 1} className="w-full h-full" style={{ fontSize: 14 }} />
+            ) : (
+              <img
+                src={img.url}
+                alt={img.altText ?? ''}
+                loading="eager"
+                decoding="async"
+                onError={() => markFailed(img.url)}
+                className="w-full h-full object-cover"
+              />
+            )}
           </button>
         )) : [1, 2, 3, 4].map(i => (
           <button
@@ -94,10 +111,14 @@ function Gallery({ images }: { images: { url: string; altText?: string | null }[
         ))}
       </div>
       <div className="aspect-[4/5] rounded-[20px] overflow-hidden" aria-label="Imagen principal del producto">
-        {displayImages ? (
+        {activeImage && !failedUrls[activeImage.url] ? (
           <img
-            src={displayImages[active]?.url ?? displayImages[0]?.url ?? ''}
-            alt={displayImages[active]?.altText ?? ''}
+            src={activeImage.url}
+            alt={activeImage.altText ?? ''}
+            loading="eager"
+            decoding="async"
+            fetchPriority="high"
+            onError={() => markFailed(activeImage.url)}
             className="w-full h-full object-cover rounded-[20px]"
           />
         ) : (

@@ -337,7 +337,13 @@ function ProductGrid({ vm }: { vm: ReturnType<typeof useCatalogController> }) {
     <>
       <div className="grid grid-cols-3 gap-x-[24px] gap-y-[28px] max-md:grid-cols-2">
         {vm.cardData.map((p, i) => (
-          <ProductCard key={p.id} product={p} onAddToCart={vm.addToCart} slotNumber={25 + i} />
+          <ProductCard
+            key={p.id}
+            product={p}
+            onAddToCart={vm.addToCart}
+            slotNumber={25 + i}
+            priority={i < 4}
+          />
         ))}
       </div>
       <Pagination current={vm.page} total={vm.totalPages} onPageChange={vm.setPage} />
