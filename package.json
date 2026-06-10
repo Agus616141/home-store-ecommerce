@@ -10,7 +10,6 @@
     "test": "pnpm --filter api test",
     "prepare": "husky"
   },
-  "packageManager": "pnpm@11.5.1",
   "engines": {
     "node": ">=20"
   },
