@@ -30,7 +30,7 @@ const productos = [
     priceCents: 590000, stock: 50, sku: "SKU-001", isFeatured: false, isActive: true,
     categories: ["sillas"],
     images: [
-      { url: "http://localhost:5173/img/products/p10.jpg", altText: "Sillon de Acento Mostaza", sortOrder: 0, isPrimary: true },
+      { url: "/img/products/p10.jpg", altText: "Sillon de Acento Mostaza", sortOrder: 0, isPrimary: true },
       { url: "https://images.unsplash.com/photo-1592078615290-033ee584e267?w=800&q=80&auto=format&fit=crop", altText: "Sillon de Acento Mostaza detalle", sortOrder: 1, isPrimary: false },
     ],
   },
@@ -41,7 +41,7 @@ const productos = [
     priceCents: 1890000, stock: 18, sku: "SKU-002", isFeatured: true, isActive: true,
     categories: ["sofas"],
     images: [
-      { url: "http://localhost:5173/img/products/p9.jpg", altText: "Sofa Velvet Verde Esmeralda", sortOrder: 0, isPrimary: true },
+      { url: "/img/products/p9.jpg", altText: "Sofa Velvet Verde Esmeralda", sortOrder: 0, isPrimary: true },
       { url: "https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?w=800&q=80&auto=format&fit=crop", altText: "Sofa Velvet Verde Esmeralda lateral", sortOrder: 1, isPrimary: false },
     ],
   },
@@ -52,7 +52,7 @@ const productos = [
     priceCents: 129000, stock: 35, sku: "SKU-003", isFeatured: false, isActive: true,
     categories: ["sillas"],
     images: [
-      { url: "http://localhost:5173/img/products/p8.jpg", altText: "Taburete Alto de Madera Natural", sortOrder: 0, isPrimary: true },
+      { url: "/img/products/p8.jpg", altText: "Taburete Alto de Madera Natural", sortOrder: 0, isPrimary: true },
     ],
   },
   {
@@ -62,7 +62,7 @@ const productos = [
     priceCents: 159000, stock: 25, sku: "SKU-004", isFeatured: false, isActive: true,
     categories: ["iluminacion"],
     images: [
-      { url: "http://localhost:5173/img/products/p7.jpg", altText: "Lampara de Mesa Madera Nordica", sortOrder: 0, isPrimary: true },
+      { url: "/img/products/p7.jpg", altText: "Lampara de Mesa Madera Nordica", sortOrder: 0, isPrimary: true },
     ],
   },
   {
@@ -72,7 +72,7 @@ const productos = [
     priceCents: 195000, stock: 120, sku: "SKU-005", isFeatured: false, isActive: true,
     categories: ["sillas"],
     images: [
-      { url: "http://localhost:5173/img/products/p6.jpg", altText: "Silla Escandinava Tulip Negra", sortOrder: 0, isPrimary: true },
+      { url: "/img/products/p6.jpg", altText: "Silla Escandinava Tulip Negra", sortOrder: 0, isPrimary: true },
     ],
   },
   {
@@ -82,7 +82,7 @@ const productos = [
     priceCents: 89000, stock: 80, sku: "SKU-006", isFeatured: false, isActive: true,
     categories: ["camas"],
     images: [
-      { url: "http://localhost:5173/img/products/p5.jpg", altText: "Almohada Confort Premium Blanca", sortOrder: 0, isPrimary: true },
+      { url: "/img/products/p5.jpg", altText: "Almohada Confort Premium Blanca", sortOrder: 0, isPrimary: true },
     ],
   },
   {
@@ -92,7 +92,7 @@ const productos = [
     priceCents: 220000, stock: 22, sku: "SKU-007", isFeatured: false, isActive: true,
     categories: ["cuadros"],
     images: [
-      { url: "http://localhost:5173/img/products/p4.jpg", altText: "Espejo Rattan Redondo Boho", sortOrder: 0, isPrimary: true },
+      { url: "/img/products/p4.jpg", altText: "Espejo Rattan Redondo Boho", sortOrder: 0, isPrimary: true },
     ],
   },
   {
@@ -102,7 +102,7 @@ const productos = [
     priceCents: 450000, stock: 40, sku: "SKU-008", isFeatured: false, isActive: true,
     categories: ["mesas"],
     images: [
-      { url: "http://localhost:5173/img/products/p3.jpg", altText: "Escritorio Nordico de Bambu", sortOrder: 0, isPrimary: true },
+      { url: "/img/products/p3.jpg", altText: "Escritorio Nordico de Bambu", sortOrder: 0, isPrimary: true },
     ],
   },
   {
@@ -112,7 +112,7 @@ const productos = [
     priceCents: 380000, stock: 200, sku: "SKU-009", isFeatured: false, isActive: true,
     categories: ["alfombras"],
     images: [
-      { url: "http://localhost:5173/img/products/p2.jpg", altText: "Alfombra Persa Beige Dorada", sortOrder: 0, isPrimary: true },
+      { url: "/img/products/p2.jpg", altText: "Alfombra Persa Beige Dorada", sortOrder: 0, isPrimary: true },
     ],
   },
   {
@@ -122,7 +122,7 @@ const productos = [
     priceCents: 249000, stock: 40, sku: "SKU-010", isFeatured: false, isActive: true,
     categories: ["sillas"],
     images: [
-      { url: "http://localhost:5173/img/products/p1.jpg", altText: "Taburete de Bar Industrial Negro", sortOrder: 0, isPrimary: true },
+      { url: "/img/products/p1.jpg", altText: "Taburete de Bar Industrial Negro", sortOrder: 0, isPrimary: true },
     ],
   },
 ];
