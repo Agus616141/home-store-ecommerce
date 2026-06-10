@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancela corridas viejas del mismo branch/PR cuando llega un push nuevo
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (api)
+    runs-on: ubuntu-latest
+
+    # Mismos gates que corre Husky en pre-commit (lint + typecheck + tests),
+    # mas los tests de integracion contra una PostgreSQL real.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: homestore
+          POSTGRES_PASSWORD: homestore_dev
+          POSTGRES_DB: homestore
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U homestore"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://homestore:homestore_dev@localhost:5432/homestore
+      DIRECT_URL: postgresql://homestore:homestore_dev@localhost:5432/homestore
+      # Secrets de prueba SOLO para CI (no son reales, no son sensibles)
+      JWT_ACCESS_SECRET: ci_access_secret_minimo_de_treinta_y_dos_chars
+      JWT_REFRESH_SECRET: ci_refresh_secret_minimo_de_treinta_y_dos_chars
+      JWT_ACCESS_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      CLIENT_URL: http://localhost:5173
+      # Stripe en modo simulador: stubs de test, nunca se conecta a Stripe real
+      STRIPE_SECRET_KEY: sk_test_stub_not_real
+      STRIPE_WEBHOOK_SECRET: whsec_test_stub_not_real_xxxxxxxxxxxxxxxxxx
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm --filter api exec prisma generate
+
+      - name: Apply database migrations
+        run: pnpm --filter api exec prisma migrate deploy
+
+      - name: Lint
+        run: pnpm --filter api lint
+
+      - name: Typecheck
+        run: pnpm --filter api typecheck
+
+      - name: Unit tests
+        run: pnpm --filter api test
+
+      - name: Integration tests
+        run: pnpm --filter api test:integration

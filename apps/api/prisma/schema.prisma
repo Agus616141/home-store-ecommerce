@@ -36,6 +36,11 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum ShippingMethod {
+  STANDARD
+  EXPRESS
+}
+
 // ─── USER ─────────────────────────────────────────────────────────────────────
 
 model User {
@@ -209,6 +214,9 @@ model Order {
   taxCents      Int @default(0)
   totalCents    Int
 
+  // Método de envío elegido (el costo va en shippingCents)
+  shippingMethod ShippingMethod @default(STANDARD)
+
   // Stripe
   stripeSessionId       String? @unique
   stripePaymentIntentId String? @unique
@@ -237,8 +245,9 @@ model OrderItem {
   orderId   String
   productId String? // nullable: producto puede borrarse (soft), la orden debe persistir
 
-  // Snapshot al momento de la compra — independiente del precio/nombre actuales
+  // Snapshot al momento de la compra — independiente del precio/nombre/imagen actuales
   productName    String
+  imageUrl       String? // snapshot de la imagen; persiste aunque el producto se borre
   unitPriceCents Int
   quantity       Int
   subtotalCents  Int

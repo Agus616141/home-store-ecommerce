@@ -1,0 +1,15 @@
+node_modules/
+dist/
+
+.env
+.env.*
+!.env.example
+
+*.log
+.tmp-server.log
+.tmp-server.err.log
+
+.DS_Store
+Thumbs.db
+
+/src/generated/prisma

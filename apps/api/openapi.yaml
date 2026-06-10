@@ -1,0 +1,2678 @@
+openapi: "3.1.0"
+
+info:
+  title: home.store API
+  version: "1.0.0"
+  description: API REST del e-commerce home.store — productos para el hogar
+
+servers:
+  - url: http://localhost:8080
+    description: Desarrollo local
+
+# ─── SEGURIDAD ────────────────────────────────────────────────────────────────
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  # ─── SCHEMAS ────────────────────────────────────────────────────────────────
+
+  schemas:
+
+    # Respuestas genéricas
+    SuccessEnvelope:
+      type: object
+      required: [status, data]
+      properties:
+        status:
+          type: string
+          enum: [success]
+        data:
+          type: object
+
+    FailEnvelope:
+      type: object
+      required: [status, statusCode, message]
+      properties:
+        status:
+          type: string
+          enum: [fail, error]
+        statusCode:
+          type: integer
+        message:
+          type: string
+        issues:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+
+    # ─── Auth ──────────────────────────────────────────────────────────────
+
+    UserPublic:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: [CUSTOMER, ADMIN]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    RegisterBody:
+      type: object
+      required: [email, password, firstName, lastName]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+
+    LoginBody:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    AuthData:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/UserPublic"
+        accessToken:
+          type: string
+
+    # ─── Users ─────────────────────────────────────────────────────────────
+
+    Address:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        label:
+          type: string
+          nullable: true
+        street:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        postalCode:
+          type: string
+        country:
+          type: string
+          default: AR
+        isDefault:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    UpdateProfileBody:
+      type: object
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 64
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 64
+        phone:
+          type: string
+          maxLength: 32
+          nullable: true
+
+    ChangePasswordBody:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+          minLength: 8
+
+    CreateAddressBody:
+      type: object
+      required: [street, city, state, postalCode]
+      properties:
+        label:
+          type: string
+          maxLength: 64
+        street:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        postalCode:
+          type: string
+        country:
+          type: string
+          default: AR
+        isDefault:
+          type: boolean
+          default: false
+
+    UpdateAddressBody:
+      type: object
+      properties:
+        label:
+          type: string
+          nullable: true
+        street:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        postalCode:
+          type: string
+        country:
+          type: string
+        isDefault:
+          type: boolean
+
+    # ─── Categories ────────────────────────────────────────────────────────
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+          nullable: true
+        imageUrl:
+          type: string
+          nullable: true
+        parentId:
+          type: string
+          nullable: true
+        sortOrder:
+          type: integer
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CategoryWithChildren:
+      allOf:
+        - $ref: "#/components/schemas/Category"
+        - type: object
+          properties:
+            children:
+              type: array
+              items:
+                $ref: "#/components/schemas/Category"
+
+    CategoryNode:
+      allOf:
+        - $ref: "#/components/schemas/Category"
+        - type: object
+          properties:
+            children:
+              type: array
+              items:
+                $ref: "#/components/schemas/CategoryNode"
+
+    CreateCategoryBody:
+      type: object
+      required: [name, slug]
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+          pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        description:
+          type: string
+        imageUrl:
+          type: string
+          format: uri
+        parentId:
+          type: string
+        sortOrder:
+          type: integer
+          minimum: 0
+          default: 0
+
+    UpdateCategoryBody:
+      type: object
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+          pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        description:
+          type: string
+          nullable: true
+        imageUrl:
+          type: string
+          format: uri
+          nullable: true
+        parentId:
+          type: string
+          nullable: true
+        sortOrder:
+          type: integer
+        isActive:
+          type: boolean
+
+    # ─── Products ──────────────────────────────────────────────────────────
+
+    ProductImage:
+      type: object
+      properties:
+        id:
+          type: string
+        productId:
+          type: string
+        url:
+          type: string
+          format: uri
+        altText:
+          type: string
+          nullable: true
+        sortOrder:
+          type: integer
+        isPrimary:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    ProductCategory:
+      type: object
+      properties:
+        productId:
+          type: string
+        categoryId:
+          type: string
+        category:
+          $ref: "#/components/schemas/Category"
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+          nullable: true
+        priceCents:
+          type: integer
+          description: Precio en centavos enteros (sin floats)
+        stock:
+          type: integer
+        sku:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+        color:
+          type: string
+          nullable: true
+        material:
+          type: string
+          nullable: true
+        isFeatured:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ProductDetail:
+      allOf:
+        - $ref: "#/components/schemas/Product"
+        - type: object
+          properties:
+            images:
+              type: array
+              items:
+                $ref: "#/components/schemas/ProductImage"
+            categories:
+              type: array
+              items:
+                $ref: "#/components/schemas/ProductCategory"
+
+    ProductCategorySlim:
+      type: object
+      properties:
+        category:
+          type: object
+          properties:
+            slug:
+              type: string
+            name:
+              type: string
+
+    ProductListItem:
+      allOf:
+        - $ref: "#/components/schemas/Product"
+        - type: object
+          properties:
+            images:
+              type: array
+              description: Solo la imagen primaria
+              items:
+                $ref: "#/components/schemas/ProductImage"
+            categories:
+              type: array
+              description: Categorías del producto (slug + name)
+              items:
+                $ref: "#/components/schemas/ProductCategorySlim"
+
+    CreateProductBody:
+      type: object
+      required: [name, slug, priceCents]
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+          pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        description:
+          type: string
+        priceCents:
+          type: integer
+          minimum: 0
+        stock:
+          type: integer
+          minimum: 0
+          default: 0
+        sku:
+          type: string
+        isActive:
+          type: boolean
+          default: true
+        images:
+          type: array
+          items:
+            $ref: "#/components/schemas/AddImageBody"
+          default: []
+        categoryIds:
+          type: array
+          items:
+            type: string
+          default: []
+
+    UpdateProductBody:
+      type: object
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+          pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        description:
+          type: string
+          nullable: true
+        priceCents:
+          type: integer
+          minimum: 0
+        stock:
+          type: integer
+          minimum: 0
+        sku:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+
+    SetCategoriesBody:
+      type: object
+      required: [categoryIds]
+      properties:
+        categoryIds:
+          type: array
+          items:
+            type: string
+
+    AddImageBody:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          format: uri
+        altText:
+          type: string
+        sortOrder:
+          type: integer
+          minimum: 0
+          default: 0
+        isPrimary:
+          type: boolean
+          default: false
+
+    # ─── Reviews ───────────────────────────────────────────────────────────
+
+    ReviewAuthor:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+
+    Review:
+      type: object
+      properties:
+        id:
+          type: string
+        productId:
+          type: string
+        userId:
+          type: string
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        title:
+          type: string
+          nullable: true
+        body:
+          type: string
+          nullable: true
+        isVerifiedPurchase:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        user:
+          $ref: "#/components/schemas/ReviewAuthor"
+
+    CreateReviewBody:
+      type: object
+      required: [rating]
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        title:
+          type: string
+          maxLength: 128
+        body:
+          type: string
+          maxLength: 2048
+
+    UpdateReviewBody:
+      type: object
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        title:
+          type: string
+          nullable: true
+        body:
+          type: string
+          nullable: true
+
+    # ─── Wishlist ──────────────────────────────────────────────────────────
+
+    WishlistItem:
+      type: object
+      properties:
+        id:
+          type: string
+        wishlistId:
+          type: string
+        productId:
+          type: string
+        product:
+          $ref: "#/components/schemas/ProductListItem"
+        createdAt:
+          type: string
+          format: date-time
+
+    Wishlist:
+      type: object
+      properties:
+        id:
+          type: string
+          nullable: true
+        userId:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/WishlistItem"
+
+    # ─── Orders ────────────────────────────────────────────────────────────
+
+    OrderItem:
+      type: object
+      properties:
+        id:
+          type: string
+        orderId:
+          type: string
+        productId:
+          type: string
+          nullable: true
+        productName:
+          type: string
+        unitPriceCents:
+          type: integer
+        quantity:
+          type: integer
+        subtotalCents:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, CONFIRMED, PROCESSING, SHIPPED, DELIVERED, CANCELLED, REFUNDED]
+        paymentStatus:
+          type: string
+          enum: [PENDING, PAID, FAILED, REFUNDED]
+        subtotalCents:
+          type: integer
+        shippingCents:
+          type: integer
+        taxCents:
+          type: integer
+        totalCents:
+          type: integer
+        stripeSessionId:
+          type: string
+          nullable: true
+        shippingStreet:
+          type: string
+          nullable: true
+        shippingCity:
+          type: string
+          nullable: true
+        shippingState:
+          type: string
+          nullable: true
+        shippingPostalCode:
+          type: string
+          nullable: true
+        shippingCountry:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+
+    CreateOrderBody:
+      type: object
+      properties:
+        shippingAddressId:
+          type: string
+          description: ID de una dirección guardada del usuario. Copia snapshot al momento de la compra.
+        notes:
+          type: string
+          maxLength: 512
+
+    UpdateOrderStatusBody:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [CONFIRMED, PROCESSING, SHIPPED, DELIVERED, CANCELLED, REFUNDED]
+
+    # ─── Cart ──────────────────────────────────────────────────────────────
+
+    CartItem:
+      type: object
+      properties:
+        id:
+          type: string
+        cartId:
+          type: string
+        productId:
+          type: string
+        quantity:
+          type: integer
+        product:
+          $ref: "#/components/schemas/ProductListItem"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Cart:
+      type: object
+      properties:
+        id:
+          type: string
+          nullable: true
+        userId:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CartItem"
+
+    AddItemBody:
+      type: object
+      required: [productId, quantity]
+      properties:
+        productId:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 99
+
+    UpdateItemBody:
+      type: object
+      required: [quantity]
+      properties:
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 99
+
+    Pagination:
+      type: object
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        pages:
+          type: integer
+
+  # ─── RESPUESTAS REUTILIZABLES ────────────────────────────────────────────
+
+  responses:
+    Unauthorized:
+      description: Token ausente o inválido
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/FailEnvelope"
+    Forbidden:
+      description: Sin permisos para esta acción
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/FailEnvelope"
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/FailEnvelope"
+    Conflict:
+      description: Conflicto de unicidad (slug, email, SKU)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/FailEnvelope"
+    BadRequest:
+      description: Datos de entrada inválidos
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/FailEnvelope"
+
+# ─── PATHS ────────────────────────────────────────────────────────────────────
+
+paths:
+
+  # ── Health ─────────────────────────────────────────────────────────────────
+
+  /health:
+    get:
+      tags: [System]
+      summary: Estado del servidor
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  # ── Eventos en tiempo real (SSE) ───────────────────────────────────────────
+
+  /api/events/stream:
+    get:
+      tags: [System]
+      summary: Stream de eventos en tiempo real (Server-Sent Events)
+      description: >
+        Conexión SSE persistente que empuja cambios de stock y productos.
+        El cuerpo es `text/event-stream`: cada evento llega como una línea
+        `data: <json>` seguida de doble salto de línea. Endpoint público.
+        Tipos de evento (campo `type` del JSON):
+        `stock.changed`, `product.created`, `product.updated`, `product.deleted`.
+      responses:
+        "200":
+          description: Stream SSE abierto
+          content:
+            text/event-stream:
+              schema:
+                type: string
+              examples:
+                stockChanged:
+                  summary: Cambio de stock tras una venta o ajuste
+                  value: |
+                    data: {"type":"stock.changed","productId":"cmq08...","stock":47}
+                productCreated:
+                  summary: Producto nuevo
+                  value: |
+                    data: {"type":"product.created","productId":"cmq09...","slug":"silla-nordica","stock":20}
+                productUpdated:
+                  summary: Producto actualizado (incluye stock actual)
+                  value: |
+                    data: {"type":"product.updated","productId":"cmq09...","slug":"silla-nordica","stock":15}
+                productDeleted:
+                  summary: Producto dado de baja
+                  value: |
+                    data: {"type":"product.deleted","productId":"cmq09..."}
+
+  # ── Auth ───────────────────────────────────────────────────────────────────
+
+  /api/auth/register:
+    post:
+      tags: [Auth]
+      summary: Registrar usuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterBody"
+      responses:
+        "201":
+          description: Usuario creado. Devuelve accessToken. Setea cookie refreshToken (httpOnly).
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/AuthData"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Iniciar sesión
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Login exitoso. Devuelve accessToken. Setea cookie refreshToken (httpOnly).
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/AuthData"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Renovar access token
+      description: Lee el refreshToken de la cookie httpOnly y devuelve un nuevo accessToken.
+      responses:
+        "200":
+          description: Nuevo accessToken generado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          accessToken:
+                            type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Cerrar sesión
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Cookie de refresh eliminada
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        nullable: true
+                        example: null
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/auth/me:
+    get:
+      tags: [Auth]
+      summary: Obtener usuario autenticado
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Perfil del usuario autenticado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          user:
+                            $ref: "#/components/schemas/UserPublic"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ── Users ──────────────────────────────────────────────────────────────────
+
+  /api/users/me:
+    get:
+      tags: [Users]
+      summary: Obtener perfil propio
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Perfil del usuario
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          user:
+                            $ref: "#/components/schemas/UserPublic"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    patch:
+      tags: [Users]
+      summary: Actualizar perfil propio
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileBody"
+      responses:
+        "200":
+          description: Perfil actualizado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          user:
+                            $ref: "#/components/schemas/UserPublic"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/users/me/password:
+    patch:
+      tags: [Users]
+      summary: Cambiar contraseña
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordBody"
+      responses:
+        "200":
+          description: Contraseña actualizada
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        nullable: true
+                        example: null
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/users/me/addresses:
+    get:
+      tags: [Users]
+      summary: Listar direcciones propias
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Lista de direcciones
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          addresses:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/Address"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    post:
+      tags: [Users]
+      summary: Crear dirección
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAddressBody"
+      responses:
+        "201":
+          description: Dirección creada
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          address:
+                            $ref: "#/components/schemas/Address"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/users/me/addresses/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+
+    patch:
+      tags: [Users]
+      summary: Actualizar dirección
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAddressBody"
+      responses:
+        "200":
+          description: Dirección actualizada
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          address:
+                            $ref: "#/components/schemas/Address"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      tags: [Users]
+      summary: Eliminar dirección
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Dirección eliminada
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/users/me/addresses/{id}/default:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    patch:
+      tags: [Users]
+      summary: Marcar dirección como predeterminada
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Dirección marcada como predeterminada
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          address:
+                            $ref: "#/components/schemas/Address"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/users/admin:
+    get:
+      tags: [Users]
+      summary: Listar todos los usuarios (ADMIN)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20, maximum: 100 }
+        - name: q
+          in: query
+          description: Buscar por email, nombre o apellido
+          schema: { type: string }
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [CUSTOMER, ADMIN]
+      responses:
+        "200":
+          description: Lista paginada de usuarios con conteo de órdenes
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        allOf:
+                          - $ref: "#/components/schemas/Pagination"
+                          - type: object
+                            properties:
+                              users:
+                                type: array
+                                items:
+                                  allOf:
+                                    - $ref: "#/components/schemas/UserPublic"
+                                    - type: object
+                                      properties:
+                                        _count:
+                                          type: object
+                                          properties:
+                                            orders:
+                                              type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/users/admin/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Users]
+      summary: Obtener usuario por ID (ADMIN)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Usuario con conteo de órdenes
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          user:
+                            allOf:
+                              - $ref: "#/components/schemas/UserPublic"
+                              - type: object
+                                properties:
+                                  _count:
+                                    type: object
+                                    properties:
+                                      orders:
+                                        type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Users]
+      summary: Actualizar rol de usuario (ADMIN)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role:
+                  type: string
+                  enum: [CUSTOMER, ADMIN]
+      responses:
+        "200":
+          description: Usuario actualizado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          user:
+                            $ref: "#/components/schemas/UserPublic"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ── Categories ─────────────────────────────────────────────────────────────
+
+  /api/categories:
+    get:
+      tags: [Categories]
+      summary: Listar categorías activas (plana)
+      responses:
+        "200":
+          description: Lista plana de categorías activas
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          categories:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/Category"
+
+    post:
+      tags: [Categories]
+      summary: Crear categoría (ADMIN)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCategoryBody"
+      responses:
+        "201":
+          description: Categoría creada
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          category:
+                            $ref: "#/components/schemas/Category"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /api/categories/tree:
+    get:
+      tags: [Categories]
+      summary: Árbol de categorías activas
+      responses:
+        "200":
+          description: Árbol anidado de categorías
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          tree:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/CategoryNode"
+
+  /api/categories/{slug}:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags: [Categories]
+      summary: Obtener categoría por slug (con hijos directos)
+      responses:
+        "200":
+          description: Categoría con sus hijos directos
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          category:
+                            $ref: "#/components/schemas/CategoryWithChildren"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/categories/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+
+    patch:
+      tags: [Categories]
+      summary: Actualizar categoría (ADMIN)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCategoryBody"
+      responses:
+        "200":
+          description: Categoría actualizada
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          category:
+                            $ref: "#/components/schemas/Category"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+    delete:
+      tags: [Categories]
+      summary: Eliminar categoría (ADMIN, soft delete)
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Categoría eliminada
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ── Products ───────────────────────────────────────────────────────────────
+
+  /api/products:
+    get:
+      tags: [Products]
+      summary: Listar productos (paginado + filtros)
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: q
+          in: query
+          description: Búsqueda por nombre o descripción
+          schema:
+            type: string
+        - name: categorySlug
+          in: query
+          description: Filtrar por una categoría (slug único, legado).
+          schema:
+            type: string
+        - name: categorySlugs
+          in: query
+          description: >-
+            Filtrar por múltiples categorías (un producto matchea si pertenece a
+            cualquiera). Repetir el param para varios valores. Se combina con
+            categorySlug si ambos se envían.
+          schema:
+            type: string
+          style: form
+          explode: true
+        - name: minPrice
+          in: query
+          description: Precio mínimo en centavos
+          schema:
+            type: integer
+        - name: maxPrice
+          in: query
+          description: Precio máximo en centavos
+          schema:
+            type: integer
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [newest, price_asc, price_desc]
+            default: newest
+        - name: color
+          in: query
+          description: Filtrar por color (exacto). Repetir el param para múltiples valores.
+          schema:
+            type: string
+          style: form
+          explode: true
+        - name: material
+          in: query
+          description: Filtrar por material (exacto). Repetir el param para múltiples valores.
+          schema:
+            type: string
+          style: form
+          explode: true
+      responses:
+        "200":
+          description: Lista paginada de productos
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        allOf:
+                          - $ref: "#/components/schemas/Pagination"
+                          - type: object
+                            properties:
+                              products:
+                                type: array
+                                items:
+                                  $ref: "#/components/schemas/ProductListItem"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+    post:
+      tags: [Products]
+      summary: Crear producto (ADMIN)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProductBody"
+      responses:
+        "201":
+          description: Producto creado con imágenes y categorías
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          product:
+                            $ref: "#/components/schemas/ProductDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /api/products/featured:
+    get:
+      tags: [Products]
+      summary: Obtener el producto destacado
+      description: Devuelve el primer producto con isFeatured true e isActive true. Devuelve null si no hay ninguno.
+      responses:
+        "200":
+          description: Producto destacado o null
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          product:
+                            nullable: true
+                            allOf:
+                              - $ref: "#/components/schemas/ProductDetail"
+
+  /api/products/{slug}:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags: [Products]
+      summary: Obtener producto por slug
+      responses:
+        "200":
+          description: Detalle completo del producto
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          product:
+                            $ref: "#/components/schemas/ProductDetail"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/products/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+
+    patch:
+      tags: [Products]
+      summary: Actualizar producto (ADMIN)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProductBody"
+      responses:
+        "200":
+          description: Producto actualizado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          product:
+                            $ref: "#/components/schemas/ProductDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+    delete:
+      tags: [Products]
+      summary: Eliminar producto (ADMIN, soft delete)
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Producto eliminado
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/products/{id}/categories:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    put:
+      tags: [Products]
+      summary: Reemplazar categorías del producto (ADMIN)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetCategoriesBody"
+      responses:
+        "200":
+          description: Categorías reemplazadas
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          product:
+                            $ref: "#/components/schemas/ProductDetail"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/products/{id}/images:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags: [Products]
+      summary: Agregar imagen al producto (ADMIN)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddImageBody"
+      responses:
+        "201":
+          description: Imagen agregada
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          image:
+                            $ref: "#/components/schemas/ProductImage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/products/{id}/images/{imageId}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: imageId
+        in: path
+        required: true
+        schema:
+          type: string
+    delete:
+      tags: [Products]
+      summary: Eliminar imagen del producto (ADMIN)
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Imagen eliminada
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ── Cart ───────────────────────────────────────────────────────────────────
+
+  /api/cart:
+    get:
+      tags: [Cart]
+      summary: Obtener carrito del usuario autenticado
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Carrito con items
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          cart:
+                            $ref: "#/components/schemas/Cart"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    delete:
+      tags: [Cart]
+      summary: Vaciar carrito
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Carrito vaciado
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/cart/items:
+    post:
+      tags: [Cart]
+      summary: Agregar item al carrito
+      description: Si el producto ya existe, acumula la cantidad.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddItemBody"
+      responses:
+        "201":
+          description: Item agregado. Devuelve el carrito actualizado.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          cart:
+                            $ref: "#/components/schemas/Cart"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Stock insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FailEnvelope"
+
+  /api/cart/items/{productId}:
+    parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+
+    patch:
+      tags: [Cart]
+      summary: Actualizar cantidad de un item
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateItemBody"
+      responses:
+        "200":
+          description: Carrito actualizado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          cart:
+                            $ref: "#/components/schemas/Cart"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Stock insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FailEnvelope"
+
+    delete:
+      tags: [Cart]
+      summary: Eliminar item del carrito
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Item eliminado. Devuelve el carrito actualizado.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          cart:
+                            $ref: "#/components/schemas/Cart"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ── Orders ─────────────────────────────────────────────────────────────────
+
+  /api/orders:
+    post:
+      tags: [Orders]
+      summary: Crear orden desde el carrito
+      description: |
+        Transacción atómica: crea la orden con snapshot de precios, decrementa stock y vacía el carrito.
+        La orden queda en PENDING hasta que Stripe confirme el pago.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrderBody"
+      responses:
+        "201":
+          description: Orden creada
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          orderId:
+                            type: string
+                          order:
+                            $ref: "#/components/schemas/Order"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Stock insuficiente o producto no disponible
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FailEnvelope"
+
+    get:
+      tags: [Orders]
+      summary: Listar órdenes propias (paginado)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10, maximum: 50 }
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, CONFIRMED, PROCESSING, SHIPPED, DELIVERED, CANCELLED, REFUNDED]
+      responses:
+        "200":
+          description: Lista paginada de órdenes
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        allOf:
+                          - $ref: "#/components/schemas/Pagination"
+                          - type: object
+                            properties:
+                              orders:
+                                type: array
+                                items:
+                                  $ref: "#/components/schemas/Order"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/orders/admin:
+    get:
+      tags: [Orders]
+      summary: Listar todas las órdenes (ADMIN)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10 }
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, CONFIRMED, PROCESSING, SHIPPED, DELIVERED, CANCELLED, REFUNDED]
+      responses:
+        "200":
+          description: Lista paginada de todas las órdenes
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        allOf:
+                          - $ref: "#/components/schemas/Pagination"
+                          - type: object
+                            properties:
+                              orders:
+                                type: array
+                                items:
+                                  $ref: "#/components/schemas/Order"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/orders/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags: [Orders]
+      summary: Obtener detalle de una orden propia
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Orden con items
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          order:
+                            $ref: "#/components/schemas/Order"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/orders/{id}/cancel:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    patch:
+      tags: [Orders]
+      summary: Cancelar orden propia (solo PENDING)
+      description: Cancela la orden y restaura el stock.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Orden cancelada
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          order:
+                            $ref: "#/components/schemas/Order"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: La orden no está en estado PENDING
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FailEnvelope"
+
+  /api/orders/{id}/status:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    patch:
+      tags: [Orders]
+      summary: Actualizar estado de orden (ADMIN)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateOrderStatusBody"
+      responses:
+        "200":
+          description: Estado actualizado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          order:
+                            $ref: "#/components/schemas/Order"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ── Payments ───────────────────────────────────────────────────────────────
+
+  /api/payments/checkout:
+    post:
+      tags: [Payments]
+      summary: Crear Stripe Checkout Session para una orden
+      description: |
+        Crea una Checkout Session en Stripe. Devuelve `checkoutUrl`.
+        El front redirige al usuario a esa URL. Stripe redirige luego al `success_url` o `cancel_url`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [orderId]
+              properties:
+                orderId:
+                  type: string
+      responses:
+        "200":
+          description: Checkout Session creada
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          checkoutUrl:
+                            type: string
+                            format: uri
+                            description: URL de Stripe Checkout — redirigir al usuario aquí
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: La orden ya fue pagada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FailEnvelope"
+
+  /api/payments/webhook:
+    post:
+      tags: [Payments]
+      summary: Webhook de Stripe (solo para uso de Stripe)
+      description: |
+        **No llamar desde el cliente.** Solo para Stripe.
+        Requiere header `stripe-signature`. Idempotente por `event.id`.
+        Evento procesado: `checkout.session.completed` → orden PAID + CONFIRMED.
+      parameters:
+        - name: stripe-signature
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Evento recibido (procesado o ya procesado previamente)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: boolean
+                    example: true
+        "400":
+          description: Firma inválida o header ausente
+
+  # ── Reviews ────────────────────────────────────────────────────────────────
+
+  /api/products/{productId}/reviews:
+    parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags: [Reviews]
+      summary: Listar reseñas de un producto
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10, maximum: 50 }
+      responses:
+        "200":
+          description: Reseñas con promedio de rating
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        allOf:
+                          - $ref: "#/components/schemas/Pagination"
+                          - type: object
+                            properties:
+                              reviews:
+                                type: array
+                                items:
+                                  $ref: "#/components/schemas/Review"
+                              averageRating:
+                                type: number
+                                nullable: true
+
+    post:
+      tags: [Reviews]
+      summary: Crear reseña (una por usuario por producto)
+      description: |
+        `isVerifiedPurchase` se setea automáticamente si el usuario tiene una orden PAID con este producto.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReviewBody"
+      responses:
+        "201":
+          description: Reseña creada
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          review:
+                            $ref: "#/components/schemas/Review"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: El usuario ya dejó una reseña para este producto
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FailEnvelope"
+
+  /api/reviews/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+
+    patch:
+      tags: [Reviews]
+      summary: Editar reseña propia
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateReviewBody"
+      responses:
+        "200":
+          description: Reseña actualizada
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          review:
+                            $ref: "#/components/schemas/Review"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      tags: [Reviews]
+      summary: Borrar reseña propia (soft delete). Admin puede borrar cualquiera.
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Reseña eliminada
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ── Wishlist ────────────────────────────────────────────────────────────────
+
+  /api/wishlist:
+    get:
+      tags: [Wishlist]
+      summary: Obtener lista de deseos propia
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Wishlist con items y producto incluido
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          wishlist:
+                            $ref: "#/components/schemas/Wishlist"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/wishlist/items:
+    post:
+      tags: [Wishlist]
+      summary: Agregar producto a la wishlist
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [productId]
+              properties:
+                productId:
+                  type: string
+      responses:
+        "201":
+          description: Producto agregado. Devuelve wishlist actualizada.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          wishlist:
+                            $ref: "#/components/schemas/Wishlist"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: El producto ya está en la wishlist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FailEnvelope"
+
+  /api/wishlist/items/{productId}:
+    parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+    delete:
+      tags: [Wishlist]
+      summary: Quitar producto de la wishlist
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Producto quitado. Devuelve wishlist actualizada.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          wishlist:
+                            $ref: "#/components/schemas/Wishlist"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ── Analytics ───────────────────────────────────────────────────────────────
+
+  /api/analytics/overview:
+    get:
+      tags: [Analytics]
+      summary: Resumen general (ADMIN)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Totales de órdenes, revenue, usuarios y productos activos
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          totalOrders:
+                            type: integer
+                          totalRevenueCents:
+                            type: integer
+                          totalUsers:
+                            type: integer
+                          totalProducts:
+                            type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/analytics/orders:
+    get:
+      tags: [Analytics]
+      summary: Órdenes agrupadas por estado (ADMIN)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Conteo de órdenes por status
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          ordersByStatus:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                status:
+                                  type: string
+                                count:
+                                  type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/analytics/products/top:
+    get:
+      tags: [Analytics]
+      summary: Productos más vendidos (ADMIN)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Top 10 productos por cantidad vendida
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          topProducts:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                productId:
+                                  type: string
+                                  nullable: true
+                                productName:
+                                  type: string
+                                totalQuantity:
+                                  type: integer
+                                totalRevenueCents:
+                                  type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
