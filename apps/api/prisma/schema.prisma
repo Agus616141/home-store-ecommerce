@@ -211,7 +211,7 @@ model Order {
 
   // Stripe
   stripeSessionId       String? @unique
-  stripePaymentIntentId String?
+  stripePaymentIntentId String? @unique
 
   // Snapshot de dirección al momento de la compra (no FK — los datos no deben mutar)
   shippingStreet     String?
