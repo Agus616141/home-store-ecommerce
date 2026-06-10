@@ -10,6 +10,7 @@ let adminToken = "";
 let productId = "";
 let imageId = "";
 let categoryId = "";
+const seededProductSlug = "test-prod-demo-image";
 
 async function cleanup() {
   await prisma.product.deleteMany({ where: { slug: { startsWith: "test-prod-" } } });
@@ -42,6 +43,21 @@ beforeAll(async () => {
     data: { name: "TestCat", slug: "test-prodcat-hogar", sortOrder: 0 },
   });
   categoryId = cat.id;
+
+  await prisma.product.create({
+    data: {
+      name: "Producto Demo Imagen",
+      slug: seededProductSlug,
+      priceCents: 1999900,
+      stock: 5,
+      images: {
+        create: [{ url: "/img/products/p1.jpg", isPrimary: true, sortOrder: 0 }],
+      },
+      categories: {
+        create: [{ categoryId }],
+      },
+    },
+  });
 });
 
 afterAll(async () => {
@@ -56,11 +72,16 @@ const auth = () => ({ Authorization: `Bearer ${adminToken}` });
 describe("GET /api/products", () => {
   it("devuelve lista paginada sin auth", async () => {
     const res = await request(app).get("/api/products");
+    const seededProduct = res.body.data.products.find(
+      (product: { slug: string; images?: Array<{ url?: string }> }) =>
+        product.slug === seededProductSlug,
+    );
+
     expect(res.status).toBe(200);
     expect(res.headers["cache-control"]).toBe(
       "public, max-age=60, s-maxage=60, stale-while-revalidate=300",
     );
-    expect(res.body.data.products[0]?.images[0]?.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/img\//);
+    expect(seededProduct?.images?.[0]?.url).toBe("/img/products/p1.jpg");
     expect(Array.isArray(res.body.data.products)).toBe(true);
     expect(res.body.data).toHaveProperty("total");
     expect(res.body.data).toHaveProperty("pages");
