@@ -53,6 +53,8 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
             <img
               src={imageUrl}
               alt={name}
+              loading="lazy"
+              decoding="async"
               className="aspect-[3/4] w-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
           ) : (
