@@ -57,6 +57,10 @@ describe("GET /api/products", () => {
   it("devuelve lista paginada sin auth", async () => {
     const res = await request(app).get("/api/products");
     expect(res.status).toBe(200);
+    expect(res.headers["cache-control"]).toBe(
+      "public, max-age=60, s-maxage=60, stale-while-revalidate=300",
+    );
+    expect(res.body.data.products[0]?.images[0]?.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/img\//);
     expect(Array.isArray(res.body.data.products)).toBe(true);
     expect(res.body.data).toHaveProperty("total");
     expect(res.body.data).toHaveProperty("pages");
@@ -85,6 +89,7 @@ describe("POST /api/products", () => {
       });
 
     expect(res.status).toBe(201);
+    expect(res.headers["cache-control"]).toBeUndefined();
     expect(res.body.data.product.slug).toBe("test-prod-silla-diseno");
     expect(res.body.data.product.priceCents).toBe(4999900);
     expect(res.body.data.product.images).toHaveLength(1);
@@ -123,6 +128,7 @@ describe("GET /api/products/:slug", () => {
     const res = await request(app).get("/api/products/test-prod-silla-diseno");
     expect(res.status).toBe(200);
     expect(res.body.data.product.images).toBeDefined();
+    expect(res.body.data.product.images[0].url).toBe("https://example.com/silla.jpg");
     expect(res.body.data.product.categories).toBeDefined();
   });
 

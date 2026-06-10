@@ -52,7 +52,13 @@ beforeAll(async () => {
   );
 
   const product = await prisma.product.create({
-    data: { name: "Mesa Test", slug: "test-order-prod-mesa", priceCents: 2500000, stock: 10 },
+    data: {
+      name: "Mesa Test",
+      slug: "test-order-prod-mesa",
+      priceCents: 2500000,
+      stock: 10,
+      images: { create: [{ url: "/img/products/p1.jpg", isPrimary: true }] },
+    },
   });
   productId = product.id;
 
@@ -80,6 +86,7 @@ describe("POST /api/orders", () => {
     expect(res.body.data.order.items).toHaveLength(1);
     expect(res.body.data.order.items[0].quantity).toBe(2);
     expect(res.body.data.order.items[0].productName).toBe("Mesa Test");
+    expect(res.body.data.order.items[0].imageUrl).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/img\//);
     expect(res.body.data.order.subtotalCents).toBe(5000000);
     expect(res.body.data.order.totalCents).toBe(5000000);
     expect(res.body.data.order.status).toBe("PENDING");
@@ -138,6 +145,7 @@ describe("GET /api/orders/:id", () => {
     const res = await request(app).get(`/api/orders/${orderId}`).set(auth());
     expect(res.status).toBe(200);
     expect(res.body.data.order.id).toBe(orderId);
+    expect(res.body.data.order.items[0].imageUrl).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/img\//);
     expect(res.body.data.order.items).toBeDefined();
   });
 

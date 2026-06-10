@@ -1,5 +1,7 @@
 import type { Request, Response } from "express";
 import { asyncHandler } from "../../middlewares/asyncHandler.js";
+import { normalizeAssetUrls } from "../../lib/assets.js";
+import { setProductsListCache } from "../../lib/cache.js";
 import * as productsService from "./products.service.js";
 import type {
   ListProductsQueryDto,
@@ -11,22 +13,23 @@ import type {
 
 export const listProducts = asyncHandler(async (req: Request, res: Response) => {
   const result = await productsService.listProducts(req.query as unknown as ListProductsQueryDto);
-  res.json({ status: "success", data: result });
+  setProductsListCache(res);
+  res.json({ status: "success", data: normalizeAssetUrls(result, req) });
 });
 
-export const getFeaturedProduct = asyncHandler(async (_req: Request, res: Response) => {
+export const getFeaturedProduct = asyncHandler(async (req: Request, res: Response) => {
   const product = await productsService.getFeaturedProduct();
-  res.json({ status: "success", data: { product: product ?? null } });
+  res.json({ status: "success", data: { product: normalizeAssetUrls(product ?? null, req) } });
 });
 
 export const getProductBySlug = asyncHandler(async (req: Request, res: Response) => {
   const product = await productsService.getProductBySlug(req.params["slug"] as string);
-  res.json({ status: "success", data: { product } });
+  res.json({ status: "success", data: { product: normalizeAssetUrls(product, req) } });
 });
 
 export const createProduct = asyncHandler(async (req: Request, res: Response) => {
   const product = await productsService.createProduct(req.body as CreateProductDto);
-  res.status(201).json({ status: "success", data: { product } });
+  res.status(201).json({ status: "success", data: { product: normalizeAssetUrls(product, req) } });
 });
 
 export const updateProduct = asyncHandler(async (req: Request, res: Response) => {
@@ -34,7 +37,7 @@ export const updateProduct = asyncHandler(async (req: Request, res: Response) =>
     req.params["id"] as string,
     req.body as UpdateProductDto,
   );
-  res.json({ status: "success", data: { product } });
+  res.json({ status: "success", data: { product: normalizeAssetUrls(product, req) } });
 });
 
 export const deleteProduct = asyncHandler(async (req: Request, res: Response) => {
@@ -47,7 +50,7 @@ export const setProductCategories = asyncHandler(async (req: Request, res: Respo
     req.params["id"] as string,
     req.body as SetCategoriesDto,
   );
-  res.json({ status: "success", data: { product } });
+  res.json({ status: "success", data: { product: normalizeAssetUrls(product, req) } });
 });
 
 export const addProductImage = asyncHandler(async (req: Request, res: Response) => {
@@ -55,7 +58,7 @@ export const addProductImage = asyncHandler(async (req: Request, res: Response) 
     req.params["id"] as string,
     req.body as AddImageDto,
   );
-  res.status(201).json({ status: "success", data: { image } });
+  res.status(201).json({ status: "success", data: { image: normalizeAssetUrls(image, req) } });
 });
 
 export const deleteProductImage = asyncHandler(async (req: Request, res: Response) => {

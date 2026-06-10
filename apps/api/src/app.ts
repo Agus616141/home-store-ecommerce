@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser";
 import { pinoHttp } from "pino-http";
 
 import { env } from "./config/env.js";
+import { productImagesDir } from "./lib/assets.js";
 import { logger } from "./lib/logger.js";
 import { notFoundMiddleware } from "./middlewares/notFound.middleware.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
@@ -40,6 +41,16 @@ app.use(pinoHttp({ logger }));
 // También va ANTES de compression: comprimir un stream SSE lo bufferea y rompe
 // la entrega en tiempo real.
 app.use("/api/events", eventsRouter);
+
+app.use(
+  "/img/products",
+  express.static(productImagesDir, {
+    maxAge: "365d",
+    setHeaders: (res) => {
+      res.setHeader("Cache-Control", "public, max-age=31536000, s-maxage=31536000");
+    },
+  }),
+);
 
 // Compresión gzip de las respuestas JSON (listados de productos, etc.).
 // Reduce el payload ~70-85% — clave para la latencia percibida en producción.

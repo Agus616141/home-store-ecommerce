@@ -1,11 +1,15 @@
 import type { Request, Response } from "express";
 import { asyncHandler } from "../../middlewares/asyncHandler.js";
+import { normalizeAssetUrls } from "../../lib/assets.js";
 import * as ordersService from "./orders.service.js";
 import type { CreateOrderDto, UpdateOrderStatusDto, ListOrdersQueryDto } from "./orders.schema.js";
 
 export const createOrder = asyncHandler(async (req: Request, res: Response) => {
   const order = await ordersService.createOrder(req.user!.id, req.body as CreateOrderDto);
-  res.status(201).json({ status: "success", data: { order, orderId: order.id } });
+  res.status(201).json({
+    status: "success",
+    data: { order: normalizeAssetUrls(order, req), orderId: order.id },
+  });
 });
 
 export const listOrders = asyncHandler(async (req: Request, res: Response) => {
@@ -13,17 +17,17 @@ export const listOrders = asyncHandler(async (req: Request, res: Response) => {
     req.user!.id,
     req.query as unknown as ListOrdersQueryDto,
   );
-  res.json({ status: "success", data: result });
+  res.json({ status: "success", data: normalizeAssetUrls(result, req) });
 });
 
 export const getOrder = asyncHandler(async (req: Request, res: Response) => {
   const order = await ordersService.getOrder(req.user!.id, req.params["id"] as string);
-  res.json({ status: "success", data: { order } });
+  res.json({ status: "success", data: { order: normalizeAssetUrls(order, req) } });
 });
 
 export const cancelOrder = asyncHandler(async (req: Request, res: Response) => {
   const order = await ordersService.cancelOrder(req.user!.id, req.params["id"] as string);
-  res.json({ status: "success", data: { order } });
+  res.json({ status: "success", data: { order: normalizeAssetUrls(order, req) } });
 });
 
 // Admin
@@ -49,13 +53,16 @@ export const listAllOrders = asyncHandler(async (req: Request, res: Response) =>
 
   res.json({
     status: "success",
-    data: {
-      orders,
-      total,
-      page: page ?? 1,
-      limit: limit ?? 10,
-      pages: Math.ceil(total / (limit ?? 10)),
-    },
+    data: normalizeAssetUrls(
+      {
+        orders,
+        total,
+        page: page ?? 1,
+        limit: limit ?? 10,
+        pages: Math.ceil(total / (limit ?? 10)),
+      },
+      req,
+    ),
   });
 });
 
@@ -64,5 +71,5 @@ export const updateOrderStatus = asyncHandler(async (req: Request, res: Response
     req.params["id"] as string,
     req.body as UpdateOrderStatusDto,
   );
-  res.json({ status: "success", data: { order } });
+  res.json({ status: "success", data: { order: normalizeAssetUrls(order, req) } });
 });

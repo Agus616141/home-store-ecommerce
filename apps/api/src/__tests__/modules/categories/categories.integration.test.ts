@@ -62,6 +62,9 @@ describe("GET /api/categories", () => {
   it("devuelve lista vacía sin autenticación", async () => {
     const res = await request(app).get("/api/categories");
     expect(res.status).toBe(200);
+    expect(res.headers["cache-control"]).toBe(
+      "public, max-age=300, s-maxage=300, stale-while-revalidate=600",
+    );
     expect(Array.isArray(res.body.data.categories)).toBe(true);
   });
 });
@@ -84,6 +87,7 @@ describe("POST /api/categories", () => {
       .send({ name: "Hogar", slug: "test-cat-hogar", sortOrder: 1 });
 
     expect(res.status).toBe(201);
+    expect(res.headers["cache-control"]).toBeUndefined();
     expect(res.body.data.category.slug).toBe("test-cat-hogar");
     categoryId = res.body.data.category.id as string;
   });

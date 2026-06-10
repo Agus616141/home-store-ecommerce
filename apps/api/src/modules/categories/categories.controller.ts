@@ -1,26 +1,31 @@
 import type { Request, Response } from "express";
 import { asyncHandler } from "../../middlewares/asyncHandler.js";
+import { normalizeAssetUrls } from "../../lib/assets.js";
+import { setCategoriesListCache } from "../../lib/cache.js";
 import * as categoriesService from "./categories.service.js";
 import type { CreateCategoryDto, UpdateCategoryDto } from "./categories.schema.js";
 
-export const listCategories = asyncHandler(async (_req: Request, res: Response) => {
+export const listCategories = asyncHandler(async (req: Request, res: Response) => {
   const categories = await categoriesService.listCategories();
-  res.json({ status: "success", data: { categories } });
+  setCategoriesListCache(res);
+  res.json({ status: "success", data: { categories: normalizeAssetUrls(categories, req) } });
 });
 
-export const getCategoryTree = asyncHandler(async (_req: Request, res: Response) => {
+export const getCategoryTree = asyncHandler(async (req: Request, res: Response) => {
   const tree = await categoriesService.getCategoryTree();
-  res.json({ status: "success", data: { tree } });
+  res.json({ status: "success", data: { tree: normalizeAssetUrls(tree, req) } });
 });
 
 export const getCategoryBySlug = asyncHandler(async (req: Request, res: Response) => {
   const category = await categoriesService.getCategoryBySlug(req.params["slug"] as string);
-  res.json({ status: "success", data: { category } });
+  res.json({ status: "success", data: { category: normalizeAssetUrls(category, req) } });
 });
 
 export const createCategory = asyncHandler(async (req: Request, res: Response) => {
   const category = await categoriesService.createCategory(req.body as CreateCategoryDto);
-  res.status(201).json({ status: "success", data: { category } });
+  res
+    .status(201)
+    .json({ status: "success", data: { category: normalizeAssetUrls(category, req) } });
 });
 
 export const updateCategory = asyncHandler(async (req: Request, res: Response) => {
@@ -28,7 +33,7 @@ export const updateCategory = asyncHandler(async (req: Request, res: Response) =
     req.params["id"] as string,
     req.body as UpdateCategoryDto,
   );
-  res.json({ status: "success", data: { category } });
+  res.json({ status: "success", data: { category: normalizeAssetUrls(category, req) } });
 });
 
 export const deleteCategory = asyncHandler(async (req: Request, res: Response) => {

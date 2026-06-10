@@ -30,6 +30,11 @@ export const createOrder = async (userId: string, data: CreateOrderDto) => {
               stock: true,
               isActive: true,
               deletedAt: true,
+              images: {
+                where: { isPrimary: true },
+                take: 1,
+                select: { url: true },
+              },
             },
           },
         },
@@ -92,6 +97,7 @@ export const createOrder = async (userId: string, data: CreateOrderDto) => {
           create: cart.items.map((item) => ({
             productId: item.productId,
             productName: item.product.name,
+            imageUrl: item.product.images[0]?.url,
             unitPriceCents: item.product.priceCents,
             quantity: item.quantity,
             subtotalCents: item.product.priceCents * item.quantity,
