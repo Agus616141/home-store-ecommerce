@@ -1,6 +1,7 @@
 import express from "express";
 import helmet from "helmet";
 import cors from "cors";
+import compression from "compression";
 import cookieParser from "cookie-parser";
 import { pinoHttp } from "pino-http";
 
@@ -36,7 +37,13 @@ app.use(pinoHttp({ logger }));
 
 // SSE: stream de eventos en tiempo real. Va ANTES del rate limit porque es una
 // conexión persistente y no debe consumir el cupo de requests.
+// También va ANTES de compression: comprimir un stream SSE lo bufferea y rompe
+// la entrega en tiempo real.
 app.use("/api/events", eventsRouter);
+
+// Compresión gzip de las respuestas JSON (listados de productos, etc.).
+// Reduce el payload ~70-85% — clave para la latencia percibida en producción.
+app.use(compression());
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });

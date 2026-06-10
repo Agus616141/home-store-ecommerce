@@ -48,7 +48,10 @@ export const listProducts = async (query: ListProductsQueryDto) => {
     ...(material?.length && { material: { in: material } }),
   };
 
-  const [products, total] = await prisma.$transaction([
+  // Lectura: Promise.all en vez de $transaction. Para un listado + count no
+  // necesitamos snapshot transaccional, y evitamos el overhead de BEGIN/COMMIT
+  // y la serialización en una sola conexión (relevante con la latencia de red en prod).
+  const [products, total] = await Promise.all([
     prisma.product.findMany({
       where,
       include: {
