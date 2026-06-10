@@ -37,7 +37,7 @@ export function NotFoundPage() {
         <div className="max-w-[420px] w-full">
           <span
             className="font-serif font-semibold block mb-4"
-            style={{ fontSize: 'clamp(64px,8vw,100px)', lineHeight: 1, color: 'var(--color-line-2)' }}
+            style={{ fontSize: 'clamp(64px,8vw,100px)', lineHeight: 1, color: 'var(--color-terra)' }}
             aria-hidden="true"
           >
             404
@@ -54,8 +54,8 @@ export function NotFoundPage() {
           <div className="flex gap-3 flex-wrap">
             <Link
               to="/"
-              className="inline-flex items-center gap-2 font-semibold text-[14.5px] px-[26px] py-[13px] rounded-full text-white transition-colors"
-              style={{ background: 'var(--color-ink)' }}
+              className="inline-flex items-center gap-2 font-semibold text-[14.5px] px-[26px] py-[13px] rounded-full transition-colors"
+              style={{ background: 'var(--color-ink)', color: 'var(--color-cream)' }}
               onMouseEnter={e => (e.currentTarget.style.background = '#000')}
               onMouseLeave={e => (e.currentTarget.style.background = 'var(--color-ink)')}
             >

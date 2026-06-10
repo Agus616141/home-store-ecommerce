@@ -107,7 +107,7 @@ export function DesktopLayout() {
   }
 
   return (
-    <>
+    <div className="flex min-h-screen flex-col">
       <ScrollToTop />
       <a className="skip-link" href="#main-content">Saltar al contenido</a>
 
@@ -420,7 +420,7 @@ export function DesktopLayout() {
       </div>
 
       {/* Page content */}
-      <main id="main-content">
+      <main id="main-content" className="flex-1">
         <Outlet />
       </main>
 
@@ -522,7 +522,7 @@ export function DesktopLayout() {
           </div>
         </div>
       </footer>
-    </>
+    </div>
   )
 }
 
